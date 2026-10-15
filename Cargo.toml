@@ -1,0 +1,52 @@
+[package]
+name = "reolink-desktop"
+version = "0.4.0"
+edition = "2021"
+rust-version = "1.83"
+description = "Desktop live view, recordings and alerts for Reolink IP cameras"
+license = "MIT"
+authors = ["h4ndsh"]
+repository = "https://github.com/h4ndsh/reolink-desktop"
+readme = "README.md"
+
+[dependencies]
+gtk = { package = "gtk4", version = "0.11", features = ["v4_12"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_5"] }
+gst = { package = "gstreamer", version = "0.25" }
+gst-app = { package = "gstreamer-app", version = "0.25" }
+# gtk4paintablesink, linked statically so the .deb does not need gstreamer1.0-gtk4.
+gstgtk4 = { package = "gst-plugin-gtk4", version = "0.15", features = ["wayland", "x11egl", "x11glx"] }
+ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
+notify-rust = "4"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "query", "rustls"] }
+async-channel = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+anyhow = "1"
+log = "0.4"
+env_logger = "0.11"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+opt-level = 3
+
+# Optional: `cargo install cargo-deb && cargo deb` uses this instead of scripts/build-deb.sh.
+[package.metadata.deb]
+maintainer = "h4ndsh <noreply@github.com>"
+section = "video"
+priority = "optional"
+depends = "$auto, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad, gstreamer1.0-libav"
+conflicts = "reolink-tray"
+replaces = "reolink-tray"
+recommends = "va-driver-all"
+extended-description = "Top-bar menu with a live camera preview (GNOME Shell extension, tray icon elsewhere), a window with a live grid, SD-card playback, spotlight and snapshots, and desktop notifications on motion, person, vehicle or animal detection."
+assets = [
+    ["target/release/reolink-desktop", "usr/bin/", "755"],
+    ["packaging/reolink-desktop.desktop", "usr/share/applications/", "644"],
+    ["packaging/reolink-desktop.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+    ["README.md", "usr/share/doc/reolink-desktop/", "644"],
+    ["gnome-extension/reolink-desktop@reolink-desktop.github.io/*", "usr/share/gnome-shell/extensions/reolink-desktop@reolink-desktop.github.io/", "644"],
+]

@@ -1,0 +1,86 @@
+/* Reolink Desktop panel menu. Buttons use the shell theme's own `.button` style;
+   only the video tiles and state dots are styled here. */
+
+.reolink-menu {
+  min-width: 360px;
+}
+
+.reolink-preview {
+  spacing: 8px;
+}
+
+.reolink-grid {
+  spacing: 8px;
+}
+
+.reolink-row {
+  spacing: 8px;
+}
+
+.reolink-message {
+  padding: 18px 0;
+  color: inherit;
+}
+
+.reolink-tile-button {
+  border-radius: 12px;
+  padding: 0;
+}
+
+.reolink-tile {
+  border-radius: 12px;
+  background-color: #000000;
+}
+
+.reolink-chip {
+  margin: 6px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 99px;
+  spacing: 6px;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.reolink-status {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  font-size: 0.9em;
+}
+
+.reolink-dot,
+.reolink-panel-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background-color: #9a9996;
+}
+
+.reolink-panel-dot {
+  margin-left: 2px;
+}
+
+.reolink-dot.online             { background-color: #33d17a; }
+.reolink-dot.connecting         { background-color: #f6d32d; }
+.reolink-dot.alert,
+.reolink-panel-dot.alert        { background-color: #e01b24; }
+.reolink-dot.offline,
+.reolink-panel-dot.offline      { background-color: #9a9996; }
+
+.reolink-buttons {
+  spacing: 8px;
+}
+
+.reolink-button {
+  padding: 8px 4px;
+  border-radius: 12px;
+  font-size: 0.9em;
+}
+
+.reolink-button-icon {
+  icon-size: 16px;
+  margin-bottom: 4px;
+}

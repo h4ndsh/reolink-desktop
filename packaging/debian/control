@@ -1,0 +1,18 @@
+Package: reolink-desktop
+Version: @VERSION@
+Section: video
+Priority: optional
+Architecture: @ARCH@
+Maintainer: h4ndsh <noreply@github.com>
+Homepage: https://github.com/h4ndsh/reolink-desktop
+Installed-Size: @SIZE@
+Depends: libc6, libgtk-4-1 (>= 4.12), libadwaita-1-0 (>= 1.5), libgstreamer1.0-0 (>= 1.20), libgstreamer-plugins-base1.0-0, libgstreamer-gl1.0-0, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-plugins-bad, gstreamer1.0-libav, dbus-user-session | dbus-x11
+Conflicts: reolink-tray
+Replaces: reolink-tray
+Recommends: va-driver-all
+Suggests: gnome-shell-extension-appindicator
+Description: Desktop live view, recordings and alerts for Reolink cameras
+ Top-bar menu with a live preview of your cameras (GNOME Shell extension,
+ tray icon elsewhere), a window with a live grid, SD-card playback,
+ spotlight control and snapshots, and desktop notifications on motion,
+ person, vehicle or animal detection. Supports several cameras.

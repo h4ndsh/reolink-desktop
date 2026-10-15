@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+    command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+    command -v update-desktop-database >/dev/null && update-desktop-database -q /usr/share/applications || true
+    cat <<'MSG'
+
+Reolink Desktop: on GNOME, log out and back in once. The top-bar menu with
+the camera preview is then enabled automatically when the app starts.
+Other desktops use the regular tray icon.
+
+MSG
+fi
+exit 0

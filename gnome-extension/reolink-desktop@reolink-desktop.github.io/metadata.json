@@ -1,0 +1,7 @@
+{
+  "uuid": "reolink-desktop@reolink-desktop.github.io",
+  "name": "Reolink Desktop",
+  "description": "Top-bar menu for the Reolink Desktop app: camera preview, recordings and settings.",
+  "shell-version": ["48", "49", "50"],
+  "url": "https://github.com/h4ndsh/reolink-desktop"
+}

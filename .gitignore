@@ -1,0 +1,19 @@
+# Build output
+/target/
+/dist/
+*.deb
+
+# Local settings and runtime files (never commit camera passwords)
+config.toml
+*.local.toml
+.env
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# Claude Code local files
+.claude/

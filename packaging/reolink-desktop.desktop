@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Reolink Desktop
+GenericName=Camera Live View
+Comment=Live view and motion alerts for Reolink IP cameras
+Exec=reolink-desktop
+Icon=reolink-desktop
+Terminal=false
+Categories=AudioVideo;Video;Monitor;
+Keywords=camera;cctv;rtsp;reolink;security;
+StartupNotify=false
+SingleMainWindow=true

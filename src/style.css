@@ -1,0 +1,60 @@
+/* Only layout and status accents: every colour comes from the user's theme
+   (libadwaita named colours), so light/dark and the accent colour follow the system. */
+
+.live {
+  padding: 0 12px 12px 12px;
+}
+
+.video-frame {
+  border-radius: 12px;
+  background-color: black;
+}
+
+.video-status {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background-color: @window_bg_color;
+  color: @window_fg_color;
+  font-size: 0.9em;
+}
+
+.controls {
+  margin-top: 10px;
+}
+
+.state {
+  padding-left: 4px;
+}
+
+.state-dot {
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 999px;
+  background-color: alpha(@window_fg_color, 0.35);
+}
+
+.state.online .state-dot     { background-color: @success_color; }
+.state.connecting .state-dot { background-color: @warning_color; }
+.state.alert .state-dot      { background-color: @error_color; }
+.state.alert                 { color: @error_color; }
+
+.actions {
+  padding: 0 12px 12px 12px;
+}
+
+.day-bar {
+  margin-bottom: 8px;
+}
+
+.clips {
+  margin-top: 10px;
+}
+
+/* Name + state chip on grid tiles (solid theme colours). */
+.tile-chip {
+  margin: 8px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background-color: @window_bg_color;
+  color: @window_fg_color;
+}
