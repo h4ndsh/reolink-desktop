@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" font-family="Inter, Cantarell, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.75" cy="0.45" r="0.5">
+      <stop offset="0" stop-color="#6366f1" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f8fafc"/>
+      <stop offset="0.55" stop-color="#e2e8f0"/>
+      <stop offset="1" stop-color="#94a3b8"/>
+    </linearGradient>
+    <linearGradient id="hood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="mount" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#94a3b8"/>
+      <stop offset="0.5" stop-color="#e2e8f0"/>
+      <stop offset="1" stop-color="#94a3b8"/>
+    </linearGradient>
+    <radialGradient id="lens" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="0.35" stop-color="#1e1b4b"/>
+      <stop offset="1" stop-color="#020617"/>
+    </radialGradient>
+    <linearGradient id="beam" x1="1" y1="0" x2="0" y2="0">
+      <stop offset="0" stop-color="#818cf8" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#818cf8" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#334155"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff" stroke-opacity="0.04"/>
+    </pattern>
+  </defs>
+
+  <!-- background -->
+  <rect width="1280" height="440" rx="24" fill="url(#bg)"/>
+  <rect width="1280" height="440" rx="24" fill="url(#grid)"/>
+  <rect width="1280" height="440" rx="24" fill="url(#glow)"/>
+
+  <!-- title -->
+  <g transform="translate(72 0)">
+    <text x="0" y="168" font-size="64" font-weight="800" fill="#f8fafc" letter-spacing="-1.5">Reolink Desktop</text>
+    <text x="2" y="218" font-size="26" fill="#c7d2fe">Your cameras, live on the Linux desktop.</text>
+    <g font-size="18" font-weight="600" fill="#e0e7ff">
+      <rect x="0" y="252" width="116" height="38" rx="19" fill="#ffffff" fill-opacity="0.08" stroke="#a5b4fc" stroke-opacity="0.35"/>
+      <circle cx="22" cy="271" r="6" fill="#ef4444"/>
+      <text x="36" y="277">Live</text>
+      <rect x="128" y="252" width="160" height="38" rx="19" fill="#ffffff" fill-opacity="0.08" stroke="#a5b4fc" stroke-opacity="0.35"/>
+      <text x="150" y="277">▶ Recordings</text>
+      <rect x="300" y="252" width="116" height="38" rx="19" fill="#ffffff" fill-opacity="0.08" stroke="#a5b4fc" stroke-opacity="0.35"/>
+      <text x="322" y="277">🔔 Alerts</text>
+    </g>
+    <text x="2" y="338" font-size="16" fill="#94a3b8">GNOME top-bar preview · RTSP · Rust</text>
+  </g>
+
+  <!-- mini live window (what the camera sees) -->
+  <g transform="translate(640 250)" filter="url(#shadow)">
+    <rect width="250" height="150" rx="12" fill="#0b1220" stroke="#475569"/>
+    <rect x="8" y="8" width="234" height="134" rx="7" fill="url(#screen)"/>
+    <!-- simple scene: path, house, tree -->
+    <path d="M8 120 L242 104 L242 142 L8 142 Z" fill="#14532d" opacity="0.7"/>
+    <path d="M100 142 L130 104 L150 104 L180 142 Z" fill="#475569"/>
+    <rect x="160" y="62" width="60" height="44" fill="#1e293b"/>
+    <path d="M154 64 L190 38 L226 64 Z" fill="#0f172a"/>
+    <rect x="182" y="80" width="14" height="26" fill="#f59e0b" opacity="0.6"/>
+    <circle cx="48" cy="82" r="20" fill="#166534"/>
+    <rect x="45" y="98" width="6" height="18" fill="#3f2d20"/>
+    <!-- person + detection box -->
+    <circle cx="128" cy="84" r="6" fill="#cbd5e1"/>
+    <rect x="122" y="91" width="12" height="20" rx="4" fill="#cbd5e1"/>
+    <rect x="112" y="72" width="32" height="46" fill="none" stroke="#22c55e" stroke-width="2"/>
+    <rect x="112" y="60" width="44" height="12" fill="#22c55e"/>
+    <text x="115" y="69" font-size="9" font-weight="700" fill="#052e16">PERSON</text>
+    <!-- overlay -->
+    <circle cx="22" cy="22" r="5" fill="#ef4444"/>
+    <text x="32" y="26" font-size="11" font-weight="700" fill="#f8fafc">LIVE</text>
+    <text x="236" y="26" font-size="10" fill="#cbd5e1" text-anchor="end">Front door</text>
+  </g>
+
+  <!-- camera field-of-view beam -->
+  <path d="M905 205 L760 140 L760 260 Z" fill="url(#beam)"/>
+
+  <!-- invented bullet camera -->
+  <g transform="translate(900 110)" filter="url(#shadow)">
+    <!-- wall mount -->
+    <rect x="250" y="-30" width="34" height="200" rx="10" fill="url(#mount)"/>
+    <path d="M200 92 L262 70 L262 104 L212 120 Z" fill="url(#mount)"/>
+    <circle cx="214" cy="104" r="22" fill="#cbd5e1" stroke="#94a3b8" stroke-width="2"/>
+    <circle cx="214" cy="104" r="8" fill="#64748b"/>
+    <!-- body -->
+    <rect x="10" y="50" width="214" height="96" rx="40" fill="url(#body)"/>
+    <!-- sun hood -->
+    <path d="M-6 40 Q-6 26 10 26 L226 26 Q240 26 240 46 L240 58 L-6 58 Z" fill="url(#hood)"/>
+    <!-- front face -->
+    <ellipse cx="18" cy="98" rx="22" ry="48" fill="#0f172a"/>
+    <ellipse cx="18" cy="98" rx="18" ry="42" fill="#1e293b"/>
+    <!-- lens -->
+    <ellipse cx="14" cy="98" rx="13" ry="26" fill="url(#lens)"/>
+    <ellipse cx="10" cy="88" rx="3.5" ry="7" fill="#ffffff" opacity="0.7"/>
+    <!-- IR LEDs -->
+    <circle cx="20" cy="66" r="3" fill="#7f1d1d"/>
+    <circle cx="20" cy="130" r="3" fill="#7f1d1d"/>
+    <!-- status LED -->
+    <circle cx="200" cy="74" r="4" fill="#22c55e"/>
+    <circle cx="200" cy="74" r="8" fill="#22c55e" opacity="0.25"/>
+    <!-- seam lines -->
+    <path d="M64 50 L64 146" stroke="#94a3b8" stroke-width="1.5" opacity="0.6"/>
+    <!-- made-up brand -->
+    <text x="128" y="108" font-size="14" font-weight="800" fill="#64748b" text-anchor="middle" letter-spacing="3">REOLINK</text>
+  </g>
+
+  <!-- signal waves -->
+  <g fill="none" stroke="#a5b4fc" stroke-width="3" stroke-linecap="round" opacity="0.8">
+    <path d="M1196 42 a20 20 0 0 1 20 20"/>
+    <path d="M1196 26 a36 36 0 0 1 36 36" opacity="0.6"/>
+    <path d="M1196 10 a52 52 0 0 1 52 52" opacity="0.35"/>
+  </g>
+</svg>

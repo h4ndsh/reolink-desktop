@@ -1,9 +1,20 @@
+<p align="center">
+  <img src="docs/banner.svg" alt="Reolink Desktop: your cameras, live on the Linux desktop" width="100%">
+</p>
+
 # Reolink Desktop
 
 Watch your Reolink cameras from the Linux desktop. Click the camera icon in the top bar to see
 them live, browse the recordings, and get a notification when someone walks by.
 
 > This is an independent project. It is not affiliated with Reolink.
+
+<p align="center">
+  <img src="docs/screenshots/top-bar-menu.png" alt="The Reolink Desktop menu in the GNOME top bar, with a live camera preview" width="520">
+  <br>
+  <sub>Click the camera icon in the GNOME top bar to see your cameras live.<br>
+  Sample camera image: <a href="https://commons.wikimedia.org/wiki/File:Rye_Level_Crossing_(Ferry_Road_Crossing)_(open).jpg">Nathan A RF</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>.</sub>
+</p>
 
 ## Features
 
