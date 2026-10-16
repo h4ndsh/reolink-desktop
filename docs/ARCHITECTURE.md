@@ -13,7 +13,7 @@ extension in JavaScript.
    panel menu, preview tiles                           │
    reads $XDG_RUNTIME_DIR/reolink-desktop/preview/*.jpg ▼
                                     ┌──────── GTK main thread ───────────┐
- ksni tray (non-GNOME) ──────────►  │ async_channel<AppEvent> event loop │
+ tray (ksni / Windows) ──────────►  │ async_channel<AppEvent> event loop │
                                     │  ├─ ui::MainWindow                 │
                                     │  │    live grid · recordings · settings
                                     │  ├─ preview::Preview (JPEG writer) │
@@ -27,7 +27,27 @@ extension in JavaScript.
   loop. Everything else sends it `AppEvent`s over one `async_channel`.
 - **Event workers:** one OS thread per camera, polling the camera's HTTP API with blocking I/O.
 - **Tray:** a StatusNotifierItem (`ksni`) is used only while the GNOME Shell extension is
-  absent. The app watches the extension's bus name and switches over automatically.
+  absent. The app watches the extension's bus name and switches over automatically. On
+  Windows there is no extension: a notification-area icon (`tray-icon`, on its own thread
+  with a Win32 message loop) is always used.
+
+## Windows
+
+The same code base builds for Windows (`x86_64-pc-windows-gnu`, MSYS2 UCRT64). Everything
+that is Linux-only is behind `cfg(target_os = "linux")`: the GNOME extension handling,
+the D-Bus name watching and `ksni`. The differences:
+
+- tray: `src/tray/windows.rs` instead of `src/tray/sni.rs`; both show the menu from `src/tray/mod.rs`;
+- launch at login: the `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` value instead of
+  an XDG autostart file;
+- notifications: WinRT toasts through `notify-rust`. They need the AppUserModelID
+  `io.github.ReolinkDesktop`, which the installer's Start-menu shortcut registers;
+- `build.rs` embeds the icon in the `.exe`.
+
+`scripts/build-windows.sh` stages the exe with its DLLs, GStreamer plugins, GIO modules,
+pixbuf loaders, schemas and icons in a relocatable `bin/ lib/ share/` layout, and then
+builds the Inno Setup installer (`packaging/windows/reolink-desktop.iss`). From Linux,
+`make check-windows` type-checks the Windows code in Docker.
 
 ## Source map
 
@@ -42,8 +62,8 @@ extension in JavaScript.
 | `src/events.rs` | Per-camera poller: rising-edge detection, per-type cooldown, "person replaces motion" |
 | `src/reolink.rs` | Reolink HTTP JSON API: token login, HTTP→HTTPS upgrade, motion/AI state, snapshot, spotlight, recording search and download |
 | `src/player.rs` | `playbin → glsinkbin → gtk4paintablesink` (plugin linked statically), RTSP over TCP, pause/seek |
-| `src/tray.rs` | StatusNotifierItem icon for KDE, XFCE and others |
-| `src/config.rs` | TOML config (mode 0600), migration from older formats and from "Reolink Tray" |
+| `src/tray/` | Tray menu and icon drawing (`mod.rs`); StatusNotifierItem for KDE, XFCE and others (`sni.rs`); Windows notification area (`windows.rs`) |
+| `src/config.rs` | TOML config (mode 0600), launch at login, migration from older formats and from "Reolink Tray" |
 | `gnome-extension/…/extension.js` | Panel button and menu, preview tiles (`St.ImageContent`), focuses the window it opens |
 
 ## D-Bus interface

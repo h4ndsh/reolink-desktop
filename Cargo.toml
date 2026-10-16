@@ -15,8 +15,7 @@ adw = { package = "libadwaita", version = "0.9", features = ["v1_5"] }
 gst = { package = "gstreamer", version = "0.25" }
 gst-app = { package = "gstreamer-app", version = "0.25" }
 # gtk4paintablesink, linked statically so the .deb does not need gstreamer1.0-gtk4.
-gstgtk4 = { package = "gst-plugin-gtk4", version = "0.15", features = ["wayland", "x11egl", "x11glx"] }
-ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
+gstgtk4 = { package = "gst-plugin-gtk4", version = "0.15" }
 notify-rust = "4"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "query", "rustls"] }
 async-channel = "2"
@@ -26,6 +25,19 @@ toml = "1"
 anyhow = "1"
 log = "0.4"
 env_logger = "0.11"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gstgtk4 = { package = "gst-plugin-gtk4", version = "0.15", features = ["wayland", "x11egl", "x11glx"] }
+ksni = { version = "0.3", default-features = false, features = ["blocking", "async-io"] }
+
+[target.'cfg(windows)'.dependencies]
+tray-icon = "0.26"
+winreg = "0.56"
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+[build-dependencies]
+# Windows only: embeds the .exe icon (no-op for other targets, see build.rs).
+embed-resource = "3"
 
 [profile.release]
 lto = "thin"

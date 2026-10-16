@@ -1,8 +1,10 @@
 //! Persistent settings, stored as TOML in `$XDG_CONFIG_HOME/reolink-desktop/config.toml`
-//! with `0600` permissions (the file contains camera passwords).
+//! with `0600` permissions (the file contains camera passwords). On Windows it
+//! is `%LOCALAPPDATA%\reolink-desktop\config.toml`, private to the user by default.
 
 use std::fs;
 use std::io::Write;
+#[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -256,11 +258,11 @@ impl Config {
         fs::create_dir_all(&dir).with_context(|| format!("creating {}", dir.display()))?;
         let tmp = dir.join("config.toml.tmp");
         let text = toml::to_string_pretty(self)?;
-        let mut file = fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
+        let mut options = fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let mut file = options
             .open(&tmp)
             .with_context(|| format!("opening {}", tmp.display()))?;
         file.write_all(text.as_bytes())?;
@@ -271,6 +273,7 @@ impl Config {
 }
 
 /// Creates or removes `~/.config/autostart/reolink-desktop.desktop`.
+#[cfg(not(windows))]
 pub fn set_autostart(enabled: bool) -> Result<()> {
     let dir = gtk::glib::user_config_dir().join("autostart");
     let path = dir.join("reolink-desktop.desktop");
@@ -283,6 +286,29 @@ pub fn set_autostart(enabled: bool) -> Result<()> {
         )?;
     } else if path.exists() {
         fs::remove_file(&path)?;
+    }
+    Ok(())
+}
+
+/// Adds or removes the app in `HKCU\…\CurrentVersion\Run` (the uninstaller
+/// removes the value too).
+#[cfg(windows)]
+pub fn set_autostart(enabled: bool) -> Result<()> {
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
+    const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+    const VALUE: &str = "Reolink Desktop";
+
+    let run = winreg::RegKey::predef(HKEY_CURRENT_USER)
+        .open_subkey_with_flags(RUN_KEY, KEY_SET_VALUE)
+        .context("opening the Run registry key")?;
+    if enabled {
+        let exe = std::env::current_exe()?;
+        run.set_value(VALUE, &format!("\"{}\"", exe.display()))?;
+    } else {
+        match run.delete_value(VALUE) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.into()),
+            _ => {}
+        }
     }
     Ok(())
 }

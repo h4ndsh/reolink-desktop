@@ -2,13 +2,17 @@
 //!
 //! Threads:
 //! * GTK main thread: window, GStreamer buses, previews, central event loop.
-//! * ksni thread: StatusNotifierItem tray (only when the GNOME Shell extension
-//!   is not running; the extension provides the panel menu on GNOME).
+//! * tray thread: StatusNotifierItem on Linux (only when the GNOME Shell
+//!   extension is not running; the extension provides the panel menu on GNOME),
+//!   notification-area icon on Windows.
 //! * one event worker per camera: polls the HTTP API, sends notifications.
 //!
 //! Everything talks to the main thread through one `async_channel` of
 //! `AppEvent`s. The GNOME Shell extension talks to the app through the
 //! application's D-Bus actions (`org.gtk.Actions` on `/io/github/ReolinkDesktop`).
+
+// No console window next to the app on Windows.
+#![cfg_attr(windows, windows_subsystem = "windows")]
 
 mod config;
 mod events;
@@ -33,7 +37,9 @@ use config::Config;
 
 const APP_ID: &str = "io.github.ReolinkDesktop";
 /// Bus name owned by the GNOME Shell extension while it is enabled.
+#[cfg(target_os = "linux")]
 const EXTENSION_BUS_NAME: &str = "io.github.ReolinkDesktop.ShellExtension";
+#[cfg(target_os = "linux")]
 const EXTENSION_UUID: &str = "reolink-desktop@reolink-desktop.github.io";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,6 +102,8 @@ pub enum AppEvent {
 
 fn main() -> glib::ExitCode {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    #[cfg(windows)]
+    windows::init();
 
     if let Err(e) = gst::init() {
         eprintln!("failed to initialise GStreamer: {e}");
@@ -142,43 +150,28 @@ fn startup(app: &adw::Application, tx: async_channel::Sender<AppEvent>, rx: asyn
     let preview = preview::Preview::new(config.clone());
     let actions = register_actions(app, &tx);
 
-    // First run: nothing is stored yet, so open the setup page.
-    enable_extension_once(&config);
+    #[cfg(target_os = "linux")]
+    {
+        install_appimage_extension();
+        enable_extension_once(&config);
+    }
 
+    // First run: nothing is stored yet, so open the setup page.
     let configured = config.read().unwrap().is_configured();
     if !configured {
         let _ = tx.send_blocking(AppEvent::ShowSettings);
     }
 
-    // The tray icon is only needed when the GNOME Shell extension is absent.
-    let tx_watch = tx.clone();
-    let tx_gone = tx.clone();
-    // Lives as long as the app; never unwatched.
-    let _ = gio::bus_watch_name(
-        gio::BusType::Session,
-        EXTENSION_BUS_NAME,
-        gio::BusNameWatcherFlags::NONE,
-        move |_, _, _| {
-            let _ = tx_watch.send_blocking(AppEvent::ExtensionPresent(true));
-        },
-        move |_, _| {
-            let _ = tx_gone.send_blocking(AppEvent::ExtensionPresent(false));
-        },
-    );
-
-    // Without any panel integration there is no other way to reach the app.
-    let tx_check = tx.clone();
-    glib::timeout_add_seconds_local_once(2, move || {
-        if configured && !extension_running() && !status_notifier_host_present() {
-            log::warn!("no panel extension or StatusNotifier host found; showing the window");
-            let _ = tx_check.send_blocking(AppEvent::ShowLive);
-        }
-    });
+    #[cfg(target_os = "linux")]
+    watch_extension(&tx, configured);
+    // No panel extension outside GNOME: the tray icon is the way in.
+    #[cfg(not(target_os = "linux"))]
+    let _ = tx.send_blocking(AppEvent::ExtensionPresent(false));
 
     let app = app.clone();
     glib::spawn_future_local(async move {
         let _hold = hold;
-        let tray: RefCell<Option<ksni::blocking::Handle<tray::CamTray>>> = RefCell::new(None);
+        let tray: RefCell<Option<tray::Handle>> = RefCell::new(None);
         let mut states: HashMap<String, CamState> = HashMap::new();
         let publish = |states: &HashMap<String, CamState>, tray: &RefCell<Option<_>>| {
             publish_state(&config.read().unwrap(), states, &paused, &actions, tray);
@@ -214,17 +207,21 @@ fn startup(app: &adw::Application, tx: async_channel::Sender<AppEvent>, rx: asyn
                     if present {
                         log::info!("GNOME Shell extension active; hiding the tray icon");
                         if let Some(handle) = tray.borrow_mut().take() {
-                            handle.shutdown().wait();
+                            handle.shutdown();
                         }
                     } else if tray.borrow().is_none() {
                         *tray.borrow_mut() = tray::spawn(paused.clone(), tx.clone());
                         publish(&states, &tray);
+                        // Linux has its own check, see watch_extension().
+                        if cfg!(not(target_os = "linux")) && tray.borrow().is_none() {
+                            window.show(ui::Page::Live);
+                        }
                     }
                 }
                 AppEvent::Quit => {
                     window.shutdown();
                     if let Some(handle) = tray.borrow_mut().take() {
-                        handle.shutdown().wait();
+                        handle.shutdown();
                     }
                     app.quit();
                     break;
@@ -288,7 +285,7 @@ fn publish_state(
     states: &HashMap<String, CamState>,
     paused: &AtomicBool,
     actions: &Actions,
-    tray: &RefCell<Option<ksni::blocking::Handle<tray::CamTray>>>,
+    tray: &RefCell<Option<tray::Handle>>,
 ) {
     let state_of = |id: &str| states.get(id).copied().unwrap_or(CamState::Connecting);
     let list: Vec<serde_json::Value> = config
@@ -321,13 +318,39 @@ fn publish_state(
         .collect::<Vec<_>>()
         .join("\n");
     if let Some(handle) = &*tray.borrow() {
-        handle.update(|t| {
-            t.state = overall;
-            t.summary = summary;
-        });
+        handle.update(overall, summary);
     }
 }
 
+/// The tray icon is only needed when the GNOME Shell extension is absent.
+#[cfg(target_os = "linux")]
+fn watch_extension(tx: &async_channel::Sender<AppEvent>, configured: bool) {
+    let tx_watch = tx.clone();
+    let tx_gone = tx.clone();
+    // Lives as long as the app; never unwatched.
+    let _ = gio::bus_watch_name(
+        gio::BusType::Session,
+        EXTENSION_BUS_NAME,
+        gio::BusNameWatcherFlags::NONE,
+        move |_, _, _| {
+            let _ = tx_watch.send_blocking(AppEvent::ExtensionPresent(true));
+        },
+        move |_, _| {
+            let _ = tx_gone.send_blocking(AppEvent::ExtensionPresent(false));
+        },
+    );
+
+    // Without any panel integration there is no other way to reach the app.
+    let tx_check = tx.clone();
+    glib::timeout_add_seconds_local_once(2, move || {
+        if configured && !extension_running() && !status_notifier_host_present() {
+            log::warn!("no panel extension or StatusNotifier host found; showing the window");
+            let _ = tx_check.send_blocking(AppEvent::ShowLive);
+        }
+    });
+}
+
+#[cfg(target_os = "linux")]
 fn name_has_owner(name: &str) -> bool {
     let Ok(conn) = gio::bus_get_sync(gio::BusType::Session, None::<&gio::Cancellable>) else {
         return false;
@@ -346,6 +369,48 @@ fn name_has_owner(name: &str) -> bool {
     matches!(reply.ok().and_then(|v| v.get::<(bool,)>()), Some((true,)))
 }
 
+#[cfg(target_os = "linux")]
+/// From an AppImage nothing is installed system-wide, so on GNOME copy the
+/// bundled Shell extension into the user's extensions folder. Runs on every
+/// start so the extension follows the AppImage's version; a symlinked
+/// development checkout (`make extension-dev`) is left alone.
+fn install_appimage_extension() {
+    if std::env::var_os("APPIMAGE").is_none() || !on_gnome() {
+        return;
+    }
+    let Some(appdir) = std::env::var_os("APPDIR") else { return };
+    let src = std::path::Path::new(&appdir).join("usr/share/gnome-shell/extensions").join(EXTENSION_UUID);
+    let dest = glib::user_data_dir().join("gnome-shell/extensions").join(EXTENSION_UUID);
+    if dest.is_symlink() {
+        return;
+    }
+    let copy = || -> std::io::Result<bool> {
+        std::fs::create_dir_all(&dest)?;
+        let mut changed = false;
+        for entry in std::fs::read_dir(&src)? {
+            let entry = entry?;
+            let data = std::fs::read(entry.path())?;
+            let target = dest.join(entry.file_name());
+            if std::fs::read(&target).ok().as_deref() != Some(data.as_slice()) {
+                std::fs::write(&target, &data)?;
+                changed = true;
+            }
+        }
+        Ok(changed)
+    };
+    match copy() {
+        Ok(true) => log::info!("installed the panel extension in {} (active after the next login)", dest.display()),
+        Ok(false) => {}
+        Err(e) => log::warn!("could not install the panel extension from the AppImage: {e}"),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn on_gnome() -> bool {
+    std::env::var("XDG_CURRENT_DESKTOP").is_ok_and(|d| d.to_uppercase().contains("GNOME"))
+}
+
+#[cfg(target_os = "linux")]
 /// On GNOME, turns the bundled Shell extension on the first time the app runs,
 /// so the panel menu works without a manual `gnome-extensions enable`.
 ///
@@ -355,8 +420,7 @@ fn name_has_owner(name: &str) -> bool {
 /// starts before the shell finished loading extensions. Runs once per user: if
 /// they disable the extension later, that choice stays.
 fn enable_extension_once(config: &Arc<RwLock<Config>>) {
-    let on_gnome = std::env::var("XDG_CURRENT_DESKTOP").is_ok_and(|d| d.to_uppercase().contains("GNOME"));
-    if !on_gnome || config.read().unwrap().ui.extension_offered {
+    if !on_gnome() || config.read().unwrap().ui.extension_offered {
         return;
     }
     let has_schema = gio::SettingsSchemaSource::default()
@@ -390,11 +454,35 @@ fn enable_extension_once(config: &Arc<RwLock<Config>>) {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn extension_running() -> bool {
     name_has_owner(EXTENSION_BUS_NAME)
 }
 
+#[cfg(target_os = "linux")]
 /// Is a tray host (`org.kde.StatusNotifierWatcher`) on the session bus?
 fn status_notifier_host_present() -> bool {
     name_has_owner("org.kde.StatusNotifierWatcher")
+}
+
+#[cfg(windows)]
+mod windows {
+    use windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+
+    /// Installed by the setup program (not run from an unpacked zip): its
+    /// Start-menu shortcut registers `APP_ID` as the AppUserModelID, which
+    /// toast notifications and taskbar grouping need.
+    pub fn installed() -> bool {
+        std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent()?.parent().map(|dir| dir.join("unins000.exe")))
+            .is_some_and(|p| p.exists())
+    }
+
+    pub fn init() {
+        if installed() {
+            let id: Vec<u16> = super::APP_ID.encode_utf16().chain([0]).collect();
+            unsafe { SetCurrentProcessExplicitAppUserModelID(id.as_ptr()) };
+        }
+    }
 }

@@ -1,0 +1,26 @@
+#!/bin/sh
+# AppImage entry point: points GTK, GIO and GStreamer at the bundled copies
+# instead of the host's, which may be missing or of a different version.
+HERE="$(dirname "$(readlink -f "$0")")"
+export APPDIR="${APPDIR:-$HERE}"
+LIB="$APPDIR/usr/lib"
+
+# Bundled data first (GSettings schemas, icons); the host's stay visible so the
+# app can still reach e.g. the org.gnome.shell schema.
+export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+export GIO_MODULE_DIR="$LIB/gio/modules"
+export GTK_EXE_PREFIX="$APPDIR/usr"
+
+export GST_PLUGIN_SYSTEM_PATH_1_0="$LIB/gstreamer-1.0"
+export GST_PLUGIN_SCANNER_1_0="$LIB/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner"
+export GST_REGISTRY_1_0="${XDG_CACHE_HOME:-$HOME/.cache}/reolink-desktop/gstreamer-registry-appimage.bin"
+unset GST_PLUGIN_PATH GST_PLUGIN_PATH_1_0
+
+# loaders.cache holds absolute paths, and the AppImage mount point changes on
+# every run, so it is written out fresh each time.
+RUNTIME="${XDG_RUNTIME_DIR:-/tmp}/reolink-desktop"
+mkdir -p "$RUNTIME"
+export GDK_PIXBUF_MODULE_FILE="$RUNTIME/pixbuf-loaders.cache"
+sed "s|@APPDIR@|$APPDIR|g" "$LIB/gdk-pixbuf-2.0/loaders.cache.in" > "$GDK_PIXBUF_MODULE_FILE"
+
+exec "$APPDIR/usr/bin/reolink-desktop" "$@"

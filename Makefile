@@ -1,17 +1,27 @@
 # Reolink Desktop — build & packaging
 #   make deps      install build dependencies (apt + rustup, needs sudo)
-#   make           build release binary and the .deb (same as `make deb`)
+#   make           build every package for this system (same as `make all`):
+#                  the .deb and the AppImage on Linux, the Windows installer in MSYS2
+#   make deb       build release binary and the .deb
 #   make install   install the .deb with apt
+#   make appimage  build a portable AppImage for other distributions (needs Docker)
+#   make windows   build the Windows installer and zip (MSYS2 UCRT64 shell only)
+#   make windows-ci       build them on GitHub Actions and download them to dist/ (needs gh)
+#   make check-windows    type-check the Windows code from Linux (needs Docker)
 # Finds rustup's cargo even if ~/.cargo/env was not sourced in this shell.
 CARGO      ?= $(or $(shell command -v cargo 2>/dev/null),$(wildcard $(HOME)/.cargo/bin/cargo))
 TARGET_DIR ?= $(or $(CARGO_TARGET_DIR),target)
 VERSION    := $(shell sed -n 's/^version *= *"\(.*\)"/\1/p' Cargo.toml | head -1)
-ARCH       := $(shell dpkg --print-architecture)
+ARCH       := $(shell dpkg --print-architecture 2>/dev/null)
 DEB        := dist/reolink-desktop_$(VERSION)_$(ARCH).deb
 
-.PHONY: all build test run deb install uninstall reset-config clean deps check-cargo extension-dev
+.PHONY: all build test run deb appimage windows windows-ci check-windows install uninstall reset-config clean deps check-cargo extension-dev
 
-all: deb
+ifdef MSYSTEM
+all: windows
+else
+all: deb appimage
+endif
 
 check-cargo:
 	@test -n "$(CARGO)" || { echo "cargo not found. Run 'make deps' first (installs Rust via rustup and the system libraries)."; exit 1; }
@@ -27,6 +37,25 @@ run: check-cargo
 
 deb: build
 	SKIP_BUILD=1 CARGO_TARGET_DIR=$(TARGET_DIR) scripts/build-deb.sh
+
+# Built in an Ubuntu 24.04 container so it also runs on older distributions.
+appimage:
+	scripts/build-appimage.sh
+
+windows:
+	scripts/build-windows.sh
+
+# Runs .github/workflows/windows.yml on the pushed current branch and waits.
+windows-ci:
+	@git diff --quiet HEAD && git rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1 \
+		&& test -z "$$(git log @{u}..HEAD --oneline)" \
+		|| { echo "Commit and push first: GitHub Actions builds what is on GitHub."; exit 1; }
+	gh workflow run windows.yml --ref $$(git rev-parse --abbrev-ref HEAD)
+	@sleep 5; run=$$(gh run list --workflow windows.yml --event workflow_dispatch --limit 1 --json databaseId --jq '.[0].databaseId'); \
+		gh run watch --exit-status $$run && gh run download $$run --name reolink-desktop-windows --dir dist
+
+check-windows:
+	scripts/check-windows.sh
 
 install: deb
 	sudo apt install -y ./$(DEB)

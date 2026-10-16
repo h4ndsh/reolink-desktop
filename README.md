@@ -5,7 +5,8 @@
 # Reolink Desktop
 
 Watch your Reolink cameras from the Linux desktop. Click the camera icon in the top bar to see
-them live, browse the recordings, and get a notification when someone walks by.
+them live, browse the recordings, and get a notification when someone walks by. Also runs on
+Windows, from the notification area.
 
 > This is an independent project. It is not affiliated with Reolink.
 
@@ -31,6 +32,7 @@ them live, browse the recordings, and get a notification when someone walks by.
 
 - Linux with **GNOME 48 or newer** (Ubuntu 25.04+ or Debian 13+). On other desktops
   (KDE, XFCE…) you get a regular tray icon instead of the top-bar preview.
+- Or **Windows 10 or 11** (64-bit), with an icon in the notification area.
 - A **Reolink camera** on your network with **RTSP** and **HTTPS** turned on. These are on by
   default on most models.
 
@@ -48,7 +50,34 @@ The app is tested with a Reolink RLC-510A.
 3. **Log out and log back in** (needed once, so GNOME loads the top-bar menu).
 4. Open **Reolink Desktop** from your applications.
 
-### Option 2: build it yourself
+### Option 2: AppImage (Fedora, Arch, openSUSE and other distributions)
+
+1. Download the latest `Reolink_Desktop-*-x86_64.AppImage` from the
+   [Releases](https://github.com/h4ndsh/reolink-desktop/releases) page.
+2. Make it executable and run it:
+   ```bash
+   chmod +x Reolink_Desktop-*-x86_64.AppImage
+   ./Reolink_Desktop-*-x86_64.AppImage
+   ```
+3. On GNOME, **log out and log back in** once, so the top-bar menu appears.
+
+The AppImage needs glibc 2.39 or newer (most distributions from 2024 onwards). To add it to
+your applications menu, use [Gear Lever](https://flathub.org/apps/it.mijorus.gearlever) or
+AppImageLauncher. To build it yourself, run `make appimage` (needs Docker).
+
+### Option 3: Windows
+
+1. Download the latest `Reolink_Desktop-*-x86_64-setup.exe` from the
+   [Releases](https://github.com/h4ndsh/reolink-desktop/releases) page and run it. No
+   administrator rights are needed.
+2. Open **Reolink Desktop** from the Start menu. It lives in the notification area (next to
+   the clock): left-click the camera icon to open the window, right-click for the menu.
+
+There is also a `-portable.zip`: unzip it anywhere and run `bin\reolink-desktop.exe`.
+Notifications then show up under "Windows PowerShell", because only the installer registers
+the app's name with Windows.
+
+### Option 4: build it yourself
 
 ```bash
 git clone https://github.com/h4ndsh/reolink-desktop.git
@@ -77,6 +106,9 @@ Then log out and back in, as in step 3 above.
 | Settings and cameras | `~/.config/reolink-desktop/config.toml` (only you can read it) |
 | Snapshots | `~/Pictures/Reolink` |
 | Saved clips | `~/Videos/Reolink` |
+
+On Windows the settings are in `%LOCALAPPDATA%\reolink-desktop\config.toml`, and snapshots
+and clips go to your Pictures and Videos folders.
 
 ## Troubleshooting
 
@@ -111,13 +143,29 @@ sudo apt remove reolink-desktop
 rm -rf ~/.config/reolink-desktop   # optional: also delete your settings
 ```
 
+For the AppImage, delete the `.AppImage` file and the top-bar extension it installed:
+```bash
+rm -rf ~/.local/share/gnome-shell/extensions/reolink-desktop@reolink-desktop.github.io
+```
+
+On Windows, use **Settings → Apps → Installed apps → Reolink Desktop → Uninstall**. To
+also delete your settings, remove the `%LOCALAPPDATA%\reolink-desktop` folder.
+
 ## For developers
 
 ```bash
 make test    # run the tests
 make run     # run from source
-make         # build the .deb into dist/
+make         # build every package (.deb and AppImage) into dist/
+make deb     # build only the .deb
+make check-windows   # type-check the Windows code from Linux (needs Docker)
+make windows-ci      # build the Windows installer on GitHub Actions, download it to dist/
 ```
+
+The Windows packages are built in [MSYS2](https://www.msys2.org) (UCRT64), which provides
+GTK, libadwaita and GStreamer for Windows. GitHub Actions does that on every `v*` tag and
+attaches the installer to the release ([.github/workflows/windows.yml](.github/workflows/windows.yml)).
+On a Windows machine with MSYS2, `make` in the UCRT64 shell builds them locally.
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the app is built, the D-Bus
 interface, and the full configuration reference.

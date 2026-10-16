@@ -7,7 +7,10 @@
 //   * state:   `cameras` (JSON) and `paused` action states
 //   * preview: `preview-keepalive` makes the app write
 //              $XDG_RUNTIME_DIR/reolink-desktop/preview/<id>.jpg a few times a second
-//   * actions: show-live, show-camera(s), show-recordings, show-settings, toggle-pause
+//   * actions: show-live, show-camera(s), show-recordings, show-settings, toggle-pause, quit
+//
+// Left click opens the preview menu; right click opens a classic context menu
+// (Live View, Recordings, Settings, Pause, Quit) like the StatusNotifier tray.
 
 import Clutter from 'gi://Clutter';
 import Cogl from 'gi://Cogl';
@@ -90,9 +93,11 @@ class ReolinkIndicator extends PanelMenu.Button {
         this._pauseItem = new PopupMenu.PopupSwitchMenuItem('Pause notifications', false);
         this._pauseItem.connect('toggled', () => this._activate('toggle-pause'));
         this.menu.addMenuItem(this._pauseItem);
-        this._startItem = new PopupMenu.PopupMenuItem('Start Reolink Desktop');
-        this._startItem.connect('activate', () => this._launchApp());
-        this.menu.addMenuItem(this._startItem);
+        this._quitItem = new PopupMenu.PopupImageMenuItem('Quit', 'application-exit-symbolic');
+        this._quitItem.connect('activate', () => this._activate('quit'));
+        this.menu.addMenuItem(this._quitItem);
+
+        this._buildContextMenu();
 
         this.menu.connect('open-state-changed', (_menu, open) => {
             if (open)
@@ -110,6 +115,58 @@ class ReolinkIndicator extends PanelMenu.Button {
 
         this.connect('destroy', () => this._onDestroy());
         this._sync();
+    }
+
+    _buildContextMenu() {
+        this._contextMenu = new PopupMenu.PopupMenu(this, 0.5, St.Side.TOP);
+        this._contextMenu.actor.add_style_class_name('panel-menu');
+        Main.uiGroup.add_child(this._contextMenu.actor);
+        this._contextMenu.actor.hide();
+        // Own manager: in the panel's one, two menus on the same button make
+        // hovering it switch from the preview menu to this one.
+        this._contextMenuManager = new PopupMenu.PopupMenuManager(this);
+        this._contextMenuManager.addMenu(this._contextMenu);
+
+        const add = (label, iconName, callback) => {
+            const item = new PopupMenu.PopupImageMenuItem(label, iconName);
+            item.connect('activate', callback);
+            this._contextMenu.addMenuItem(item);
+            return item;
+        };
+        this._ctxRunning = [
+            add('Live View', 'camera-web-symbolic', () => this._open('show-live')),
+            add('Recordings', 'document-open-recent-symbolic', () => this._open('show-recordings')),
+            add('Settings…', 'emblem-system-symbolic', () => this._open('show-settings')),
+        ];
+        this._ctxPauseSeparator = new PopupMenu.PopupSeparatorMenuItem();
+        this._contextMenu.addMenuItem(this._ctxPauseSeparator);
+        this._ctxPauseItem = new PopupMenu.PopupSwitchMenuItem('Pause notifications', false);
+        this._ctxPauseItem.connect('toggled', () => this._activate('toggle-pause'));
+        this._contextMenu.addMenuItem(this._ctxPauseItem);
+        this._ctxQuitSeparator = new PopupMenu.PopupSeparatorMenuItem();
+        this._contextMenu.addMenuItem(this._ctxQuitSeparator);
+        this._ctxRunning.push(
+            add('Quit', 'application-exit-symbolic', () => this._activate('quit')));
+    }
+
+    /// Right click toggles the context menu; anything else goes to the
+    /// preview menu (PanelMenu.Button's default behaviour).
+    vfunc_event(event) {
+        const type = event.type();
+        if (type !== Clutter.EventType.BUTTON_PRESS && type !== Clutter.EventType.TOUCH_BEGIN)
+            return super.vfunc_event(event);
+
+        if (type === Clutter.EventType.BUTTON_PRESS &&
+            event.get_button() === Clutter.BUTTON_SECONDARY) {
+            this.menu.close();
+            this._contextMenu.toggle();
+            return Clutter.EVENT_STOP;
+        }
+        if (this._contextMenu.isOpen) {
+            this._contextMenu.close();
+            return Clutter.EVENT_STOP;
+        }
+        return super.vfunc_event(event);
     }
 
     // ── App connection ──────────────────────────────────────────
@@ -157,6 +214,7 @@ class ReolinkIndicator extends PanelMenu.Button {
             this._sync();
         } else if (name === 'paused') {
             this._pauseItem.setToggleState(value.deepUnpack());
+            this._ctxPauseItem.setToggleState(value.deepUnpack());
         }
     }
 
@@ -168,6 +226,7 @@ class ReolinkIndicator extends PanelMenu.Button {
     /// Runs an action that shows the app window, then gives it focus.
     _open(name, parameter = null) {
         this.menu.close();
+        this._contextMenu.close();
         if (!this._running) {
             this._launchApp();
             return;
@@ -178,6 +237,7 @@ class ReolinkIndicator extends PanelMenu.Button {
 
     _launchApp() {
         this.menu.close();
+        this._contextMenu.close();
         const app = Shell.AppSystem.get_default().lookup_app(DESKTOP_ID);
         if (app)
             app.activate();
@@ -241,14 +301,26 @@ class ReolinkIndicator extends PanelMenu.Button {
         this._buttons.visible = this._running;
         this._pauseItem.visible = this._running && this._cameras.length > 0;
         this._separator.visible = true;
-        this._startItem.visible = !this._running;
+        this._quitItem.visible = this._running;
+
+        for (const item of this._ctxRunning)
+            item.visible = this._running;
+        this._ctxPauseSeparator.visible = this._pauseItem.visible;
+        this._ctxPauseItem.visible = this._pauseItem.visible;
+        this._ctxQuitSeparator.visible = this._running;
 
         this._rebuildTiles(previewCams);
         this._updatePanel();
     }
 
     _updatePanel() {
-        this._icon.opacity = this._running ? 255 : 128;
+        // Like a tray icon, the button only exists while the app runs.
+        this.visible = this._running;
+        this.container.visible = this._running;
+        if (!this._running) {
+            this.menu.close();
+            this._contextMenu.close();
+        }
         const states = this._cameras.map(c => c.state);
         let dot = null;
         if (states.includes('alert'))
@@ -417,6 +489,8 @@ class ReolinkIndicator extends PanelMenu.Button {
     }
 
     _onDestroy() {
+        this._contextMenu?.destroy();
+        this._contextMenu = null;
         this._stopPreview();
         this._cancelFocusWatch();
         this._disconnectActions();

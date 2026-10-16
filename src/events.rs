@@ -243,8 +243,16 @@ impl Worker {
             .summary(kind.title())
             .body(&format!("{} · {time}", camera.name))
             .icon("reolink-desktop")
-            .action("default", "Open Live View")
             .timeout(notify_rust::Timeout::Milliseconds(8000));
+        // Windows toasts open on a body click by themselves; an action would add a button.
+        #[cfg(not(windows))]
+        n.action("default", "Open Live View");
+        // Without the installer's shortcut Windows drops toasts for an unknown
+        // app id; notify-rust then falls back to PowerShell's.
+        #[cfg(windows)]
+        if crate::windows::installed() {
+            n.app_id(crate::APP_ID);
+        }
         if let Some(path) = &image {
             n.image_path(&path.to_string_lossy());
         }
@@ -255,11 +263,11 @@ impl Worker {
                 let tx = self.tx.clone();
                 let id = self.id.clone();
                 thread::spawn(move || {
-                    handle.wait_for_action(|action| {
-                        if action == "default" {
+                    let _ = handle.wait_for_response(move |response: &notify_rust::NotificationResponse| {
+                        if is_open(response) {
                             let _ = tx.send_blocking(AppEvent::ShowCamera(id));
                         }
-                    })
+                    });
                 });
             }
             Err(e) => log::warn!("notification failed: {e}"),
@@ -308,6 +316,12 @@ fn save_snapshot(jpeg: Vec<u8>) -> Result<PathBuf> {
         let _ = fs::remove_file(p);
     }
     Ok(path)
+}
+
+/// The user clicked the notification (body or the "default" action).
+fn is_open(response: &notify_rust::NotificationResponse) -> bool {
+    use notify_rust::NotificationResponse::{Action, Default};
+    matches!(response, Default) || matches!(response, Action(key) if key == "default")
 }
 
 #[cfg(test)]
