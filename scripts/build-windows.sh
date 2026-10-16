@@ -107,7 +107,7 @@ if [ -z "$ISCC" ]; then
 fi
 "$ISCC" -Q \
     "-DAppVersion=$VERSION" \
-    "-DSourceDir=$(cygpath -w "$STAGE")" \
+    "-DSourceDir=$(cygpath -aw "$STAGE")" \
     "-DOutputDir=$(cygpath -w "$PWD/dist")" \
     "-DOutputName=$BASE-setup" \
     "$(cygpath -w packaging/windows/reolink-desktop.iss)"
