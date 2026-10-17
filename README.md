@@ -20,6 +20,7 @@ Windows, from the notification area.
 ## Features
 
 - **Live preview in the top bar.** Click the camera icon to see your cameras right away (GNOME).
+  Right-click it for a quick menu: live view, recordings, settings, pause notifications, quit.
 - **Live window.** Show one camera full size, or all of them in a grid.
 - **Recordings.** Play back the camera's SD card by day: play, pause, seek, save clips.
 - **Alerts.** Get desktop notifications for motion, people, vehicles and animals, with a
@@ -40,7 +41,7 @@ The app is tested with a Reolink RLC-510A.
 
 ## Install
 
-### Option 1: download the package (easiest)
+### Option 1: Ubuntu and Debian (.deb, easiest)
 
 1. Download the latest `.deb` from the [Releases](https://github.com/h4ndsh/reolink-desktop/releases) page.
 2. Install it:
@@ -86,7 +87,7 @@ make deps      # installs Rust and the build tools (asks for your password)
 make install   # builds and installs the package
 ```
 
-Then log out and back in, as in step 3 above.
+Then log out and back in, as in step 3 of option 1.
 
 ## Getting started
 
@@ -113,7 +114,8 @@ and clips go to your Pictures and Videos folders.
 ## Troubleshooting
 
 **There is no camera icon in the top bar.**
-Log out and back in. If it is still missing, turn the extension on:
+The icon only shows while the app is running, so open **Reolink Desktop** first. If it is
+still missing, log out and back in, then turn the extension on:
 ```bash
 gnome-extensions enable reolink-desktop@reolink-desktop.github.io
 ```
